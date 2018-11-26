@@ -1,0 +1,40 @@
+name:                hs-bowling
+version:             0.1.0.0
+github:              "TolikPylypchuk/hs-bowling"
+license:             MIT
+author:              "Tolik Pylypchuk"
+maintainer:          "pylypchuk.tolik@gmail.com"
+copyright:           "2018 Tolik Pylypchuk"
+
+extra-source-files:
+- README.md
+
+description:         Please see the README on GitHub at <https://github.com/TolikPylypchuk/hs-bowling#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  hs-bowling:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hs-bowling
+
+tests:
+  hs-bowling-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hs-bowling
