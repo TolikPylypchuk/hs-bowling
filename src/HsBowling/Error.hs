@@ -2,16 +2,18 @@ module HsBowling.Error where
 
 import Data.List.NonEmpty
 
-data ConfigError = InvalidNumberOfPins Integer
-                 | InvalidNumberOfFrames Integer
-                 | InvalidMaxNameLength Integer
-                 | InvalidMaxPlayerCount Integer
+data ConfigError = InvalidNumberOfPins Int
+                 | InvalidNumberOfFrames Int
+                 | InvalidMaxNameLength Int
+                 | InvalidMaxPlayerCount Int
+                 deriving (Show, Eq)
 
-data BowlingError = InvalidFrameNumber Integer
+data BowlingError = InvalidFrameNumber Int
                   | PlayerNameEmpty
                   | PlayerNameTooLong String
                   | PlayerListEmpty
-                  | TooManyPlayers Integer
+                  | TooManyPlayers Int
                   | DuplicatePlayers (NonEmpty String)
-                  | InvalidScore Integer
+                  | InvalidScore Int
                   | RollAfterLastFrame
+                  deriving (Show, Eq)

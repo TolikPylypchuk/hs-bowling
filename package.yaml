@@ -13,7 +13,9 @@ description:         Please see the README on GitHub at <https://github.com/Toli
 
 dependencies:
 - base >= 4.7 && < 5
+- lens
 - mtl
+- text
 - validation
 
 library:
