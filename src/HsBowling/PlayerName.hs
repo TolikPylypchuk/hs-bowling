@@ -12,6 +12,7 @@ import Data.Char (isSpace)
 import Data.Function
 import Data.List
 import Data.List.NonEmpty (NonEmpty, fromList)
+
 import HsBowling.Error
 import HsBowling.Config
 
@@ -27,7 +28,7 @@ get = to $ \(P name) -> name
 getNames :: Getter ValidatedPlayerNames (NonEmpty PlayerName)
 getNames = to $ \(V names) -> names
 
-createName :: String -> Reader Config (Either BowlingError PlayerName)
+createName :: MonadReader Config reader => String -> reader (Either BowlingError PlayerName)
 createName name = do
     let name' = trim name
     config <- ask
@@ -38,7 +39,7 @@ createName name = do
             Just len | (length name') > len -> Right $ P name'
             _ -> Left $ PlayerNameTooLong name'
 
-validatePlayerNames :: [PlayerName] -> Reader Config (Either BowlingError ValidatedPlayerNames)
+validatePlayerNames :: MonadReader Config reader => [PlayerName] -> reader (Either BowlingError ValidatedPlayerNames)
 validatePlayerNames players =
     ask <&> \config ->
         if null players then

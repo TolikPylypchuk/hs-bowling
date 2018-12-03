@@ -4,9 +4,9 @@ module HsBowling.Config (
     Config, numberOfPins, numberOfFrames, maxNameLength, maxPlayerCount, defaultConfig, createConfig
 ) where
 
-import Control.Lens
 import Control.Lens.Getter
 import Data.Validation
+
 import HsBowling.Error
 
 data Config = C {
