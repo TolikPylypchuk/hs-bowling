@@ -2,7 +2,7 @@
 
 module HsBowling.Frame (
     FrameState, Frame, FrameScore, state, number, totalScore, firstRollScore, secondRollScore, thirdRollScore,
-    create, isFinished, isLast, roll
+    createFrame, isFrameFinished, isLast, rollFrame, getScores, getTotalScores
 ) where
 
 import Control.Lens.Getter
@@ -64,16 +64,16 @@ frameScore = FS {
     _thirdRoll = Nothing
 }
 
-create :: MonadReader Config reader => Int -> reader (Either BowlingError Frame)
-create num =
+createFrame :: MonadReader Config reader => Int -> reader (Either BowlingError Frame)
+createFrame num =
     ask <&> \config ->
         if num > 0 && num <= config^.numberOfFrames
         then Right $ F { _state = NotStarted, _number = num }
         else Left $ InvalidFrameNumber num
 
-isFinished :: FrameState -> Bool
-isFinished frame =
-    case frame of
+isFrameFinished :: Frame -> Bool
+isFrameFinished frame =
+    case frame^.state of
         Open _       -> True
         Strike       -> True
         LastStrike _ -> True
@@ -83,7 +83,7 @@ isFinished frame =
 
 isLast :: MonadReader Config reader => Frame -> reader Bool
 isLast frame =
-    ask <&> (view numberOfFrames) <&> \numFrames -> frame^.number == numFrames
+    asks (view numberOfFrames) <&> \numFrames -> frame^.number == numFrames
 
 rollForNotStarted :: MonadReader Config reader => Int -> Frame -> reader Frame
 rollForNotStarted score frame =
@@ -121,8 +121,8 @@ rollForLastSpareInProgress :: MonadReader Config reader => Int -> Int -> Frame -
 rollForLastSpareInProgress firstScore secondScore frame =
     return frame { _state = LastSpare (firstScore, secondScore) }
 
-roll :: MonadReader Config reader => Int -> Frame -> reader (Either BowlingError Frame)
-roll score frame = do
+rollFrame :: MonadReader Config reader => Int -> Frame -> reader (Either BowlingError Frame)
+rollFrame score frame = do
     config <- ask
     if score >= 0 && score <= config^.numberOfPins then
         let rollFun = case frame^.state of
@@ -153,7 +153,7 @@ roll score frame = do
 
 getScores :: MonadReader Config reader => [Frame] -> reader [Maybe Int]
 getScores frames = do
-    numPins <- ask <&> view numberOfPins
+    numPins <- asks (view numberOfPins)
     return $
         frames >>= \frame ->
             case frame^.state of
