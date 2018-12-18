@@ -179,7 +179,7 @@ getScores frames = do
                     [ Just firstScore, Just (numPins - firstScore), Just secondScore ]
 
 getTotal :: [FrameScore] -> Int
-getTotal = maybe 0 id . fmap (maybe 0 id . view totalScore) . headMay
+getTotal = fromMaybe 0 . fmap (fromMaybe 0 . view totalScore) . headMay
 
 getTotalScores :: MonadReader Config reader => [Frame] -> reader [FrameScore]
 getTotalScores frames =
@@ -212,7 +212,7 @@ getTotalScores frames =
                                     }
                                 Spare score ->
                                     frameScore {
-                                        _total = Just $ total + numPins + (maybe 0 id $ headMay scores),
+                                        _total = Just $ total + numPins + (fromMaybe 0 $ headMay scores),
                                         _firstRoll = Just score,
                                         _secondRoll = Just $ numPins - score
                                     }

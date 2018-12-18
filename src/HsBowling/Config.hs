@@ -4,7 +4,9 @@ module HsBowling.Config (
     Config, numberOfPins, numberOfFrames, maxNameLength, maxPlayerCount, defaultConfig, createConfig
 ) where
 
+import Control.Arrow ((>>>))
 import Control.Lens.Getter
+import Control.Lens.Operators
 import Data.Validation
 
 import HsBowling.Error
@@ -42,7 +44,7 @@ positiveOrElse error num =
 
 forMaybe :: (Int -> Validation [ConfigError] Int) -> Maybe Int -> Validation [ConfigError] (Maybe Int)
 forMaybe validationFunc =
-    sequenceA . fmap validationFunc
+    fmap validationFunc >>> sequenceA
 
 validateNumPins :: Int -> Validation [ConfigError] Int
 validateNumPins = positiveOrElse InvalidNumberOfPins
@@ -51,10 +53,10 @@ validateNumFrames :: Int -> Validation [ConfigError] Int
 validateNumFrames = positiveOrElse InvalidNumberOfFrames
 
 validateMaxNameLength :: Maybe Int -> Validation [ConfigError] (Maybe Int)
-validateMaxNameLength = forMaybe $ positiveOrElse InvalidMaxNameLength
+validateMaxNameLength = positiveOrElse InvalidMaxNameLength & forMaybe
 
 validateMaxPlayerCount :: Maybe Int -> Validation [ConfigError] (Maybe Int)
-validateMaxPlayerCount = forMaybe $ positiveOrElse InvalidMaxPlayerCount
+validateMaxPlayerCount = positiveOrElse InvalidMaxPlayerCount & forMaybe
 
 createConfig' :: Int -> Int -> Maybe Int -> Maybe Int -> Config
 createConfig' numPins numFrames maxNameLength maxPlayerCount = C {

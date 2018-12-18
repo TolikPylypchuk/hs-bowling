@@ -4,7 +4,7 @@ module HsBowling.PlayerName (
     PlayerName, ValidatedPlayerNames, get, getNames, createName, validatePlayerNames
 ) where
 
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), (>>>))
 import Control.Lens.Getter
 import Control.Lens.Operators
 import Control.Monad.Reader
@@ -48,14 +48,14 @@ validatePlayerNames players =
             Just count | length players > count ->
                 Left $ TooManyPlayers $ length players
             _ ->
-                let duplicatePlayers = players & groupList id & filter ((/=) 1 . length . snd) & map fst
+                let duplicatePlayers = players & groupList id & filter (snd >>> length >>> (/= 1)) & map fst
                  in if null duplicatePlayers
                     then players & fromList & V & Right
-                    else duplicatePlayers & fromList & fmap (view get) & DuplicatePlayers & Left
+                    else Left $ DuplicatePlayers $ duplicatePlayers & fromList & fmap (view get)
 
 trim :: String -> String
 trim = f . f
     where f = reverse . dropWhile isSpace
 
 groupList :: (Eq b) => (a -> b) -> [a] -> [(b, [a])]
-groupList f = map (f . head &&& id) . groupBy ((==) `on` f)
+groupList f = groupBy ((==) `on` f) >>> map (f . head &&& id)

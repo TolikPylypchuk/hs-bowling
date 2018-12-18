@@ -4,6 +4,7 @@ module HsBowling.Player (
     Player, name, frames, createPlayer, rollPlayer, lastFrame, isPlayerFinished
 ) where
 
+import Control.Arrow ((>>>))
 import Control.Lens.Getter
 import Control.Lens.Operators
 import Control.Monad.Reader
@@ -35,7 +36,7 @@ createPlayer name =
 rollPlayer :: MonadReader Config reader => Int -> Player -> reader (Either BowlingError Player)
 rollPlayer score player =
     ask <&> \config -> do
-        let reversedFrames = reverse $ toList $ player^.frames
+        let reversedFrames = player^.frames & toList & reverse
         
         frame <- runReader (rollFrame score $ head reversedFrames) config
 
@@ -52,7 +53,7 @@ rollPlayer score player =
         return $ player { _frames = fromList result }
 
 lastFrame :: Player -> Frame
-lastFrame = last . toList . view frames
+lastFrame = view frames >>> toList >>> last
 
 isPlayerFinished :: MonadReader Config reader => Player -> reader Bool
 isPlayerFinished player =
