@@ -31,11 +31,11 @@ getNames = to $ \(V names) -> names
 createName :: MonadReader Config reader => String -> reader (Either BowlingError PlayerName)
 createName name = do
     let name' = trim name
-    config <- ask
+    maxNameLength' <- asks $ view maxNameLength
     return $
         if null name
         then Left PlayerNameEmpty
-        else case config^.maxNameLength of
+        else case maxNameLength' of
             Just len | (length name') > len -> Right $ P name'
             _ -> Left $ PlayerNameTooLong name'
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module HsBowling.Game (
-    Game, players, createGame
+    Game, players, createGame, currentPlayer, rollGame, isGameFinished
 ) where
 
 import Control.Arrow ((>>>))
