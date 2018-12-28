@@ -50,7 +50,7 @@ rollPlayer score player =
             else
                 Right frames
         
-        return $ player { _frames = fromList result }
+        return $ player { _frames = fromList $ reverse result }
 
 lastFrame :: Player -> Frame
 lastFrame = view frames >>> toList >>> last

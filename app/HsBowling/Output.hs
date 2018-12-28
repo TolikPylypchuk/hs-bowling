@@ -103,9 +103,9 @@ formatError error =
     ask <&> \config ->
         case error of
             InvalidFrameNumber num ->
-                show num ++ " is an invalid frame number"
+                show num ++ " is an invalid frame number."
             PlayerNameEmpty ->
-                "The player's name is empty"
+                "The player's name is empty."
             PlayerNameTooLong _ ->
                 "The name is too long. A player's name should not exceed " ++ maxLength ++ " characters."
                 where maxLength = show $ config^.maxNameLength & fromMaybe 0
@@ -123,7 +123,7 @@ formatError error =
                         & N.toList
                         & intercalate ", "
                         & ("The names " ++)
-                        & (++ " are duplicated")
+                        & (++ " are duplicated.")
             InvalidScore score ->
                 show score ++ " is an invalid score. A score of a frame must be less than or equal to " ++ numPins ++ "."
                 where numPins = show $ config^.numberOfPins

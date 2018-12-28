@@ -36,8 +36,8 @@ createName name = do
         if null name
         then Left PlayerNameEmpty
         else case maxNameLength' of
-            Just len | (length name') > len -> Right $ P name'
-            _ -> Left $ PlayerNameTooLong name'
+            Just maxLen | (length name') > maxLen -> Left $ PlayerNameTooLong name'
+            _ -> Right $ P name'
 
 validatePlayerNames :: MonadReader Config reader => [PlayerName] -> reader (Either BowlingError ValidatedPlayerNames)
 validatePlayerNames players =
