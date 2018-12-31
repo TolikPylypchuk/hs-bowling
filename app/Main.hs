@@ -4,6 +4,7 @@ import Control.Lens.Operators
 import Control.Monad.Reader
 import System.IO
 
+import HsBowling.Util
 import HsBowling.Config
 import HsBowling.Game
 import HsBowling.Output
@@ -12,7 +13,7 @@ import HsBowling.Input
 createGame' :: ReaderT Config IO Game
 createGame' = do
     players <- readPlayers
-    game <- createGame players
+    game <- getResult $ createGame players
     case game of
         Right game' ->
             return game'
@@ -31,7 +32,7 @@ play game = do
         return 0
     else do
         score <- liftIO $ readRoll game
-        newGame <- rollGame score game
+        newGame <- getResult $ rollGame score game
         case newGame of
             Right newGame' -> do
                 formattedGame <- formatGame newGame'

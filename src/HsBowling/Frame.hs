@@ -11,6 +11,7 @@ import Control.Monad.Reader
 import Data.Maybe
 import Safe
 
+import HsBowling.Util
 import HsBowling.Error
 import HsBowling.Config
 
@@ -64,12 +65,12 @@ frameScore = FS {
     _thirdRoll = Nothing
 }
 
-createFrame :: MonadReader Config reader => Int -> reader (Either BowlingError Frame)
+createFrame :: Int -> ReaderT Config (Either BowlingError) Frame
 createFrame num =
-    ask <&> \config ->
+    ask >>= \config ->
         if num > 0 && num <= config^.numberOfFrames
-        then Right $ F { _state = NotStarted, _number = num }
-        else Left $ InvalidFrameNumber num
+        then return $ F { _state = NotStarted, _number = num }
+        else returnError $ InvalidFrameNumber num
 
 isFrameFinished :: Frame -> Bool
 isFrameFinished frame =
@@ -121,35 +122,34 @@ rollForLastSpareInProgress :: MonadReader Config reader => Int -> Int -> Frame -
 rollForLastSpareInProgress firstScore secondScore frame =
     return frame { _state = LastSpare (firstScore, secondScore) }
 
-rollFrame :: MonadReader Config reader => Int -> Frame -> reader (Either BowlingError Frame)
+rollFrame :: Int -> Frame -> ReaderT Config (Either BowlingError) Frame
 rollFrame score frame = do
     config <- ask
     if score >= 0 && score <= config^.numberOfPins then
-        let rollFun = case frame^.state of
-                        NotStarted ->
-                            Right rollForNotStarted
-                        InProgress firstScore ->
-                            let totalScore = firstScore + score
-                                in if totalScore <= config^.numberOfPins
-                                then Right $ rollForInProgress firstScore
-                                else Left $ InvalidScore totalScore
-                        Open _ | frame^.number < config^.numberOfFrames ->
-                            Right rollForFinished
-                        Strike ->
-                            Right rollForFinished
-                        Spare _ ->
-                            Right rollForFinished
-                        LastStrikeInProgress1 ->
-                            Right rollForLastStrikeInProgress1
-                        LastStrikeInProgress2 firstScore ->
-                            Right $ rollForLastStrikeInProgress2 firstScore
-                        LastSpareInProgress firstScore ->
-                            Right $ rollForLastSpareInProgress firstScore
-                        _ ->
-                            Left RollAfterLastFrame
-         in return $ rollFun <&> \rollFun' -> runReader (rollFun' score frame) config
+        case frame^.state of
+            NotStarted ->
+                rollForNotStarted score frame
+            InProgress firstScore ->
+                let totalScore = firstScore + score
+                    in if totalScore <= config^.numberOfPins
+                    then rollForInProgress firstScore score frame
+                    else returnError $ InvalidScore totalScore
+            Open _ | frame^.number < config^.numberOfFrames ->
+                rollForFinished score frame
+            Strike ->
+                rollForFinished score frame
+            Spare _ ->
+                rollForFinished score frame
+            LastStrikeInProgress1 ->
+                rollForLastStrikeInProgress1 score frame
+            LastStrikeInProgress2 firstScore ->
+                rollForLastStrikeInProgress2 firstScore score frame
+            LastSpareInProgress firstScore ->
+                rollForLastSpareInProgress firstScore score frame
+            _ ->
+                returnError RollAfterLastFrame
     else
-        return $ Left $ InvalidScore score
+        returnError $ InvalidScore score
 
 getScores :: MonadReader Config reader => [Frame] -> reader [Maybe Int]
 getScores frames = do
@@ -191,61 +191,62 @@ getTotalScores frames =
             frame : otherFrames -> join . return $ do
                 scores <- getScores otherFrames <&> catMaybes
                 let total = getTotal frameScores
-                let score = case frame^.state of
-                                NotStarted ->
-                                    frameScore
-                                InProgress score ->
-                                    frameScore {
-                                        _total = Just $ total + score,
-                                        _firstRoll = Just score
-                                    }
-                                Open (firstScore, secondScore) ->
-                                    frameScore {
-                                        _total = Just $ total + firstScore + secondScore,
-                                        _firstRoll = Just firstScore,
-                                        _secondRoll = Just secondScore
-                                    }
-                                Strike ->
-                                    frameScore {
-                                        _total = Just $ total + numPins + (foldl (+) 0 $ take 2 scores),
-                                        _firstRoll = Just numPins
-                                    }
-                                Spare score ->
-                                    frameScore {
-                                        _total = Just $ total + numPins + (fromMaybe 0 $ headMay scores),
-                                        _firstRoll = Just score,
-                                        _secondRoll = Just $ numPins - score
-                                    }
-                                LastStrikeInProgress1 ->
-                                    frameScore {
-                                        _total = Just $ total + numPins,
-                                        _firstRoll = Just numPins
-                                    }
-                                LastStrikeInProgress2 score ->
-                                    frameScore {
-                                        _total = Just $ total + numPins + score,
-                                        _firstRoll = Just numPins,
-                                        _secondRoll = Just score
-                                    }
-                                LastStrike (firstScore, secondScore) ->
-                                    frameScore {
-                                        _total = Just $ total + numPins + firstScore + secondScore,
-                                        _firstRoll = Just numPins,
-                                        _secondRoll = Just firstScore,
-                                        _thirdRoll = Just secondScore
-                                    }
-                                LastSpareInProgress score ->
-                                    frameScore {
-                                        _total = Just $ total + numPins,
-                                        _firstRoll = Just score,
-                                        _secondRoll = Just $ numPins - score
-                                    }
-                                LastSpare (firstScore, secondScore) ->
-                                    frameScore {
-                                        _total = Just $ total + numPins + secondScore,
-                                        _firstRoll = Just firstScore,
-                                        _secondRoll = Just $ numPins - firstScore,
-                                        _thirdRoll = Just secondScore
-                                    }
+                let score =
+                        case frame^.state of
+                            NotStarted ->
+                                frameScore
+                            InProgress score ->
+                                frameScore {
+                                    _total = Just $ total + score,
+                                    _firstRoll = Just score
+                                }
+                            Open (firstScore, secondScore) ->
+                                frameScore {
+                                    _total = Just $ total + firstScore + secondScore,
+                                    _firstRoll = Just firstScore,
+                                    _secondRoll = Just secondScore
+                                }
+                            Strike ->
+                                frameScore {
+                                    _total = Just $ total + numPins + (foldl (+) 0 $ take 2 scores),
+                                    _firstRoll = Just numPins
+                                }
+                            Spare score ->
+                                frameScore {
+                                    _total = Just $ total + numPins + (fromMaybe 0 $ headMay scores),
+                                    _firstRoll = Just score,
+                                    _secondRoll = Just $ numPins - score
+                                }
+                            LastStrikeInProgress1 ->
+                                frameScore {
+                                    _total = Just $ total + numPins,
+                                    _firstRoll = Just numPins
+                                }
+                            LastStrikeInProgress2 score ->
+                                frameScore {
+                                    _total = Just $ total + numPins + score,
+                                    _firstRoll = Just numPins,
+                                    _secondRoll = Just score
+                                }
+                            LastStrike (firstScore, secondScore) ->
+                                frameScore {
+                                    _total = Just $ total + numPins + firstScore + secondScore,
+                                    _firstRoll = Just numPins,
+                                    _secondRoll = Just firstScore,
+                                    _thirdRoll = Just secondScore
+                                }
+                            LastSpareInProgress score ->
+                                frameScore {
+                                    _total = Just $ total + numPins,
+                                    _firstRoll = Just score,
+                                    _secondRoll = Just $ numPins - score
+                                }
+                            LastSpare (firstScore, secondScore) ->
+                                frameScore {
+                                    _total = Just $ total + numPins + secondScore,
+                                    _firstRoll = Just firstScore,
+                                    _secondRoll = Just $ numPins - firstScore,
+                                    _thirdRoll = Just secondScore
+                                }
                 
                 getTotalScores' (score : frameScores) otherFrames

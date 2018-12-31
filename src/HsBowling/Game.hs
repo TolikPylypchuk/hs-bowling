@@ -30,13 +30,12 @@ data Game = G {
 players :: Getter Game (NonEmpty Player)
 players = to _players
 
-createGame :: MonadReader Config reader => ValidatedPlayerNames -> reader (Either BowlingError Game)
+createGame :: ValidatedPlayerNames -> ReaderT Config (Either BowlingError) Game
 createGame =
     view getNames
     >>> fmap createPlayer
     >>> sequenceA
-    >>> fmap sequenceA
-    >>> fmap (fmap (\players -> G { _players = players }))
+    >>> fmap (\players -> G { _players = players })
 
 currentPlayer :: Game -> Player
 currentPlayer game =
@@ -47,16 +46,15 @@ currentPlayer game =
             (tryFind (not . (lastFrame >>> isFrameFinished)) players')
             where tryFind predicate = N.dropWhile (not . predicate) >>> headMay
 
-rollGame :: MonadReader Config reader => Int -> Game -> reader (Either BowlingError Game)
+rollGame :: Int -> Game -> ReaderT Config (Either BowlingError) Game
 rollGame score game =
     game^.players
-    & fmap (\player ->
+    <&> (\player ->
         if player^.name == (currentPlayer game)^.name
         then rollPlayer score player
-        else return $ Right player)
+        else return player)
     & sequenceA
-    & fmap sequenceA
-    & fmap (fmap (\players -> game { _players = players }))
+    <&> (\players -> game { _players = players })
 
 isGameFinished :: MonadReader Config reader => Game -> reader Bool
 isGameFinished game =

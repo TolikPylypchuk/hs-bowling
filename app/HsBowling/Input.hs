@@ -8,6 +8,7 @@ import Control.Monad.Reader
 import System.IO
 import Text.Read (readMaybe)
 
+import HsBowling.Util
 import HsBowling.Config
 import HsBowling.PlayerName
 import HsBowling.Player
@@ -25,7 +26,6 @@ readNumPlayers = do
     where readNumPlayers' = do
             maxPlayerCount' <- asks $ view maxPlayerCount
             numPlayers <- liftIO $ getInt
-            liftIO $ putStrLn $ show numPlayers
             case (numPlayers, maxPlayerCount') of
                 (Just num, Nothing) | num > 0 ->
                     return num
@@ -47,7 +47,7 @@ readPlayer index = do
     readPlayer'
     where readPlayer' = do
             playerName <- liftIO getLine
-            name <- createName playerName
+            name <- getResult $ createName playerName
             case name of
                 Right name' ->
                     return name'
@@ -62,7 +62,7 @@ readPlayers :: ReaderT Config IO ValidatedPlayerNames
 readPlayers = do
     numPlayers <- readNumPlayers
     names <- sequenceA [ readPlayer i | i <- [1 .. numPlayers] ] 
-    validatedNames <- validatePlayerNames names
+    validatedNames <- getResult $ validatePlayerNames names
 
     case validatedNames of
         Right names -> do

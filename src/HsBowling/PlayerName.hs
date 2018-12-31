@@ -13,6 +13,7 @@ import Data.Function
 import Data.List
 import Data.List.NonEmpty (NonEmpty, fromList)
 
+import HsBowling.Util
 import HsBowling.Error
 import HsBowling.Config
 
@@ -28,30 +29,29 @@ get = to $ \(P name) -> name
 getNames :: Getter ValidatedPlayerNames (NonEmpty PlayerName)
 getNames = to $ \(V names) -> names
 
-createName :: MonadReader Config reader => String -> reader (Either BowlingError PlayerName)
+createName :: String -> ReaderT Config (Either BowlingError) PlayerName
 createName name = do
     let name' = trim name
     maxNameLength' <- asks $ view maxNameLength
-    return $
-        if null name
-        then Left PlayerNameEmpty
-        else case maxNameLength' of
-            Just maxLen | (length name') > maxLen -> Left $ PlayerNameTooLong name'
-            _ -> Right $ P name'
+    if null name
+    then returnError PlayerNameEmpty
+    else case maxNameLength' of
+        Just maxLen | (length name') > maxLen -> returnError $ PlayerNameTooLong name'
+        _ -> return $ P name'
 
-validatePlayerNames :: MonadReader Config reader => [PlayerName] -> reader (Either BowlingError ValidatedPlayerNames)
+validatePlayerNames :: [PlayerName] -> ReaderT Config (Either BowlingError) ValidatedPlayerNames
 validatePlayerNames players =
-    ask <&> \config ->
+    ask >>= \config ->
         if null players then
-            Left PlayerListEmpty
+            returnError PlayerListEmpty
         else case config^.maxPlayerCount of
             Just count | length players > count ->
-                Left $ TooManyPlayers $ length players
+                returnError $ TooManyPlayers $ length players
             _ ->
                 let duplicatePlayers = players & groupList id & filter (snd >>> length >>> (/= 1)) & map fst
                  in if null duplicatePlayers
-                    then players & fromList & V & Right
-                    else Left $ DuplicatePlayers $ duplicatePlayers & fromList & fmap (view get)
+                    then return $ V $ fromList players
+                    else returnError $ DuplicatePlayers $ duplicatePlayers & fromList & fmap (view get)
 
 trim :: String -> String
 trim = f . f
